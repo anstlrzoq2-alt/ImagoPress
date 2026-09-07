@@ -1,0 +1,6 @@
+{
+  "name": "이미지 용량 및 픽셀 압축기",
+  "description": "서버 없이 브라우저에서 100% 동작하는 클라이언트 사이드 이미지 압축 및 리사이징 웹 애플리케이션",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

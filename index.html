@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>이미지 용량 및 픽셀 압축기 | Client-Side Image Compressor</title>
+  <meta name="description" content="서버 전송 없이 100% 브라우저에서 안전하게 동작하는 무료 이미지 압축 및 리사이징 도구" />
+  <meta property="og:title" content="이미지 용량 및 픽셀 압축기 | Client-Side Image Compressor" />
+  <meta property="og:description" content="서버 전송 없이 100% 브라우저에서 안전하게 동작하는 무료 이미지 압축 및 리사이징 도구" />
+  <meta property="og:type" content="website" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- JSZip CDN for batch zip download -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    /* Geometric Balance Design Theme Styles */
+    body {
+      margin: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar { width: 100%; }
+    @media (min-width: 1024px) {
+      .sidebar { width: 330px; }
+    }
+    .main-content { flex: 1; }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .dark .card {
+      background: #0f172a;
+      border-color: #1e293b;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      height: 120px;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .dark .drop-zone {
+      border-color: #334155;
+    }
+    .progress-bar {
+      height: 6px;
+      background: #f1f5f9;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .dark .progress-bar {
+      background: #1e293b;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #3b82f6;
+      transition: width 0.2s ease;
+    }
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 5px;
+      outline: none;
+    }
+    .dark .slider {
+      background: #334155;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #3b82f6;
+      cursor: pointer;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    .slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: #3b82f6;
+      cursor: pointer;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+    .btn-secondary {
+      background: white;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+    }
+    .dark .btn-secondary {
+      background: #1e293b;
+      border-color: #334155;
+      color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+    .dark .btn-secondary:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+    .badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .dark .badge-success {
+      background: rgba(22, 101, 52, 0.4);
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.2);
+    }
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .dark .badge-warning {
+      background: rgba(146, 64, 14, 0.4);
+      color: #fcd34d;
+      border: 1px solid rgba(252, 211, 77, 0.2);
+    }
+    .text-smaller {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .dark .text-smaller {
+      color: #94a3b8;
+    }
+
+    /* Custom scrollbar and checkerboard pattern */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.4);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.7);
+    }
+    .checkerboard-bg {
+      background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+                        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+                        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    .dark .checkerboard-bg {
+      background-image: linear-gradient(45deg, #334155 25%, transparent 25%), 
+                        linear-gradient(-45deg, #334155 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #334155 75%), 
+                        linear-gradient(-45deg, transparent 75%, #334155 75%);
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased overflow-hidden">
+  <div id="app" class="h-screen w-full flex flex-col bg-slate-50 font-sans text-slate-800 dark:bg-slate-950 dark:text-slate-100 overflow-hidden">
+
+    <!-- Header -->
+    <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 lg:px-8 z-10 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Imago<span class="text-blue-600">Press</span></h1>
+          <span class="text-xs font-medium bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900/60">v2.4 Pro</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="btnClearAll" class="btn-secondary text-xs sm:text-sm disabled:opacity-40 disabled:pointer-events-none">전체 비우기</button>
+        <button id="btnDownloadZip" class="btn-primary text-xs sm:text-sm disabled:opacity-40 disabled:pointer-events-none">
+          <svg class="w-4 h-4 animate-spin hidden" id="zipSpinner" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <svg class="w-4 h-4" id="zipIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span>Download All (.ZIP) (<span id="zipCountDisplay">0</span>장)</span>
+        </button>
+        <button id="btnCopyHtml" title="GitHub Pages용 index.html 전체 소스코드 복사" class="btn-secondary text-xs sm:text-sm hidden sm:inline-flex">
+          <svg id="copyIcon" class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+          <span id="copyBtnText">소스 복사</span>
+        </button>
+        <button id="btnThemeToggle" title="다크 모드 전환" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg id="iconSun" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <svg id="iconMoon" class="w-5 h-5 block dark:hidden text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+      <!-- Left Sidebar: Controls -->
+      <aside class="sidebar bg-white dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col gap-6 overflow-y-auto shrink-0 z-10 max-h-[46vh] lg:max-h-none">
+        <!-- Upload Image -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Upload Image</label>
+          <div id="dropZone" class="drop-zone rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 relative group overflow-hidden">
+            <input id="fileInput" type="file" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+            <svg class="w-8 h-8 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <p class="text-xs text-slate-400 font-medium">Drop files or click to browse</p>
+            <span class="text-[10px] text-slate-400 dark:text-slate-500">Ctrl+V 스크린샷 붙여넣기 지원</span>
+          </div>
+        </div>
+
+        <!-- Quality Settings -->
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Quality Settings</label>
+            <span id="qualityDisplay" class="text-sm font-bold text-blue-600 dark:text-blue-400">80%</span>
+          </div>
+          <input id="qualitySlider" type="range" class="slider" min="1" max="100" value="80">
+          <div class="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 mt-2 uppercase font-bold">
+            <span>High Speed</span>
+            <span>High Quality</span>
+          </div>
+          <div class="flex items-center justify-between gap-1 mt-3">
+            <button type="button" data-quality="50" class="btn-quality-preset px-2 py-1 text-[11px] font-medium rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">50%</button>
+            <button type="button" data-quality="70" class="btn-quality-preset px-2 py-1 text-[11px] font-medium rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">70%</button>
+            <button type="button" data-quality="80" class="btn-quality-preset px-2 py-1 text-[11px] font-semibold rounded bg-blue-600 text-white transition">80%</button>
+            <button type="button" data-quality="92" class="btn-quality-preset px-2 py-1 text-[11px] font-medium rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">92%</button>
+          </div>
+        </div>
+
+        <!-- Max Resolution -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Max Resolution</label>
+            <label class="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+              <input id="keepAspectRatio" type="checkbox" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+              <span>비율 유지</span>
+            </label>
+          </div>
+          <select id="resizePreset" class="w-full border border-slate-200 dark:border-slate-700 rounded p-2 text-xs bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none mb-2">
+            <option value="none" selected>원본 해상도 유지 (No Resize)</option>
+            <option value="1920">FHD (최대 1920px - 추천)</option>
+            <option value="2560">QHD (최대 2560px)</option>
+            <option value="3840">4K UHD (최대 3840px)</option>
+            <option value="1280">HD (최대 1280px)</option>
+            <option value="800">웹/블로그 최적화 (최대 800px)</option>
+            <option value="400">썸네일/아이콘 (최대 400px)</option>
+            <option value="custom">직접 지정 (Custom)</option>
+          </select>
+          <div id="customDimensionInputs" class="grid grid-cols-2 gap-2 opacity-60 pointer-events-none transition">
+            <div class="relative">
+              <input id="maxWidthInput" type="number" min="10" max="10000" placeholder="1920" class="w-full border border-slate-200 dark:border-slate-700 rounded p-2 pr-7 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none">
+              <span class="absolute right-2.5 top-2 text-[10px] text-slate-400 font-bold">W</span>
+            </div>
+            <div class="relative">
+              <input id="maxHeightInput" type="number" min="10" max="10000" placeholder="1080" class="w-full border border-slate-200 dark:border-slate-700 rounded p-2 pr-7 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none">
+              <span class="absolute right-2.5 top-2 text-[10px] text-slate-400 font-bold">H</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output Format -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Output Format</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="relative flex items-center p-2 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+              <input type="radio" name="formatOption" value="original" checked class="text-blue-600 focus:ring-blue-500">
+              <span class="ml-2 text-xs font-medium text-slate-800 dark:text-slate-200">Original</span>
+            </label>
+            <label class="relative flex items-center p-2 rounded border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/40 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/60 transition">
+              <input type="radio" name="formatOption" value="image/webp" class="text-blue-600 focus:ring-blue-500">
+              <span class="ml-2 text-xs font-bold text-blue-700 dark:text-blue-300">WebP ⚡</span>
+            </label>
+            <label class="relative flex items-center p-2 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+              <input type="radio" name="formatOption" value="image/jpeg" class="text-blue-600 focus:ring-blue-500">
+              <span class="ml-2 text-xs font-medium text-slate-800 dark:text-slate-200">JPEG</span>
+            </label>
+            <label class="relative flex items-center p-2 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+              <input type="radio" name="formatOption" value="image/png" class="text-blue-600 focus:ring-blue-500">
+              <span class="ml-2 text-xs font-medium text-slate-800 dark:text-slate-200">PNG</span>
+            </label>
+          </div>
+          <div id="jpgBgOptionWrap" class="mt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>투명 JPG 배경:</span>
+            <select id="jpgBgColor" class="px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <option value="#ffffff" selected>흰색 (#FFF)</option>
+              <option value="#000000">검은색 (#000)</option>
+              <option value="#f8fafc">연회색 (#F8FAFC)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sidebar Actions & Footer -->
+        <div class="mt-auto pt-5 border-t border-slate-100 dark:border-slate-800 space-y-3">
+          <div class="flex items-center gap-2">
+            <button id="btnRecompressAll" class="btn-primary w-full text-xs py-2 disabled:opacity-40 disabled:pointer-events-none">
+              <svg class="w-3.5 h-3.5 animate-spin hidden" id="recompressSpinner" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg class="w-3.5 h-3.5" id="recompressIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              일괄 재압축
+            </button>
+            <button id="btnResetOptions" title="기본값 복원" class="btn-secondary text-xs px-2.5 py-2">
+              초기화
+            </button>
+          </div>
+          <div class="flex items-center gap-2 text-smaller">
+            <div class="w-2 h-2 rounded-full bg-green-500"></div>
+            <span>Local processing active</span>
+          </div>
+          <p class="text-[10px] leading-relaxed text-slate-400">Your files never leave your computer. Processing happens entirely within your browser.</p>
+        </div>
+      </aside>
+
+      <!-- Main Content: Dashboard -->
+      <main class="main-content p-6 lg:p-8 flex flex-col overflow-y-auto min-w-0 bg-slate-50 dark:bg-slate-950">
+        <!-- Dashboard Queue Header -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              Processing Queue <span id="listBadgeCount" class="font-normal text-slate-400 text-sm">(0 images)</span>
+            </h2>
+            <span id="statCount" class="hidden">0</span>
+          </div>
+          <!-- Stats Bar -->
+          <div id="statsBar" class="flex items-center gap-6">
+            <div class="text-right">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Original</p>
+              <p id="statOriginalSize" class="text-lg font-bold text-slate-700 dark:text-slate-200">0 B</p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Compressed</p>
+              <p id="statCompressedSize" class="text-lg font-bold text-blue-600 dark:text-blue-400">0 B</p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Saving</p>
+              <p id="statSavingRate" class="text-lg font-bold text-green-600 dark:text-emerald-400">0%</p>
+              <span id="statSavedBytes" class="text-[10px] text-green-600 dark:text-emerald-400 font-medium hidden">0 B 절약</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Batch Processing Progress Bar -->
+        <div id="batchProgressWrap" class="hidden mb-6 card p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs font-semibold">
+            <div class="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span id="batchProgressLabel">이미지 압축 처리 중...</span>
+            </div>
+            <span id="batchProgressPercent" class="text-slate-600 dark:text-slate-400">0%</span>
+          </div>
+          <div class="progress-bar"><div id="batchProgressBar" class="progress-fill" style="width: 0%"></div></div>
+        </div>
+
+        <!-- View Controls & Filter Bar -->
+        <div class="flex items-center justify-between gap-3 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">목록 정렬 및 뷰</span>
+          <div class="flex items-center gap-2">
+            <select id="sortSelect" class="px-2.5 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <option value="upload">업로드 순</option>
+              <option value="savings-desc">절감률 높은 순</option>
+              <option value="size-desc">압축 후 용량 큰 순</option>
+              <option value="name">파일명 순</option>
+            </select>
+            <div class="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-white dark:bg-slate-800">
+              <button id="btnViewGrid" title="카드 뷰" class="p-1.5 rounded text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+              </button>
+              <button id="btnViewList" title="테이블 뷰" class="p-1.5 rounded text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="card py-16 text-center border-dashed">
+          <div class="w-12 h-12 mx-auto rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          </div>
+          <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">처리 대기열이 비어 있습니다</h4>
+          <p class="text-xs text-slate-400 mt-1">좌측 사이드바에 이미지를 추가하여 즉시 압축해보세요.</p>
+        </div>
+
+        <!-- Cards Container (Grid View) -->
+        <div id="cardsGrid" class="grid grid-cols-1 gap-4 overflow-hidden"></div>
+
+        <!-- Table Container (List View) -->
+        <div id="tableListWrap" class="hidden overflow-x-auto card">
+          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 font-semibold">
+              <tr>
+                <th scope="col" class="py-3 px-4">썸네일</th>
+                <th scope="col" class="py-3 px-4">파일명 / 포맷</th>
+                <th scope="col" class="py-3 px-4">해상도 변경</th>
+                <th scope="col" class="py-3 px-4">용량 (원본 ➔ 압축)</th>
+                <th scope="col" class="py-3 px-4">절감률</th>
+                <th scope="col" class="py-3 px-4 text-right">작업</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-auto flex flex-wrap justify-between items-center py-4 text-slate-400 text-xs border-t border-slate-200 dark:border-slate-800">
+          <div class="text-smaller">
+            Support: JPG, PNG, WebP, AVIF | Max file size: 50MB
+          </div>
+          <div class="flex gap-4">
+            <span class="text-smaller">Documentation</span>
+            <span class="text-smaller">Privacy Policy</span>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Compare Modal (Before / After Split Slider) -->
+    <div id="compareModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+      <div class="card max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <!-- Modal Header -->
+        <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div>
+            <h3 id="modalFilename" class="text-sm font-bold text-slate-900 dark:text-white truncate max-w-md">화질 비교 뷰어</h3>
+            <p id="modalSubInfo" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">슬라이더를 좌우로 드래그하여 원본과 압축본의 디테일을 비교하세요</p>
+          </div>
+          <button id="btnCloseModal" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Modal Body with Split Comparison -->
+        <div class="flex-1 p-4 overflow-hidden flex items-center justify-center checkerboard-bg relative select-none">
+          <div id="compareContainer" class="relative max-w-full max-h-[62vh] overflow-hidden rounded-lg shadow-md flex items-center justify-center cursor-ew-resize">
+            <!-- Compressed Image (Base layer) -->
+            <img id="modalCompressedImg" src="" alt="압축 후" class="block max-h-[62vh] max-w-full object-contain pointer-events-none" />
+            
+            <!-- Original Image (Clipped layer) -->
+            <div id="modalOriginalClip" class="absolute inset-y-0 left-0 overflow-hidden pointer-events-none" style="width: 50%;">
+              <img id="modalOriginalImg" src="" alt="원본" class="block max-h-[62vh] max-w-none object-contain h-full" />
+            </div>
+
+            <!-- Draggable divider line -->
+            <div id="modalDivider" class="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.8)] cursor-ew-resize flex items-center justify-center" style="left: 50%;">
+              <div class="w-7 h-7 -ml-3.5 rounded-full bg-white dark:bg-slate-800 border-2 border-blue-600 shadow-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" transform="rotate(90 12 12)"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Labels -->
+            <div class="absolute top-3 left-3 px-2 py-1 bg-black/70 backdrop-blur-md rounded text-[11px] font-bold text-white pointer-events-none shadow">
+              원본 (좌측)
+            </div>
+            <div class="absolute top-3 right-3 px-2 py-1 bg-blue-600/80 backdrop-blur-md rounded text-[11px] font-bold text-white pointer-events-none shadow">
+              압축본 (우측)
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+          <div id="modalDetails" class="text-xs text-slate-600 dark:text-slate-300 font-medium"></div>
+          <div class="flex items-center gap-2">
+            <button id="modalBtnDownload" class="btn-primary text-xs py-1.5 px-4 shadow">
+              이 이미지 다운로드
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Element -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2 px-4 py-2.5 rounded bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-medium shadow-xl">
+      <span id="toastMessage">알림</span>
+    </div>
+
+  </div>
+
+  <!-- APPLICATION LOGIC (Pure Vanilla JS & HTML5 Canvas API) -->
+  <script>
+    (function () {
+      'use strict';
+
+      // --- Application State ---
+      const state = {
+        images: [], // List of loaded and processed image records
+        options: {
+          quality: 0.8,
+          maxDimensionPreset: 'none',
+          maxWidth: null,
+          maxHeight: null,
+          keepAspectRatio: true,
+          format: 'original', // 'original' | 'image/jpeg' | 'image/png' | 'image/webp'
+          jpgBgColor: '#ffffff'
+        },
+        viewMode: 'grid', // 'grid' | 'list'
+        sortBy: 'upload',
+        isProcessing: false,
+        theme: localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      };
+
+      let activeModalImage = null;
+
+      // Theme Application
+      function applyTheme(theme) {
+        state.theme = theme;
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', theme);
+      }
+      applyTheme(state.theme);
+
+      // DOM Elements Mapping
+      const elements = {
+        btnThemeToggle: document.getElementById('btnThemeToggle'),
+        btnCopyHtml: document.getElementById('btnCopyHtml'),
+        copyIcon: document.getElementById('copyIcon'),
+        copyBtnText: document.getElementById('copyBtnText'),
+        qualitySlider: document.getElementById('qualitySlider'),
+        qualityDisplay: document.getElementById('qualityDisplay'),
+        qualityPresets: document.querySelectorAll('.btn-quality-preset'),
+        resizePreset: document.getElementById('resizePreset'),
+        keepAspectRatio: document.getElementById('keepAspectRatio'),
+        customDimensionInputs: document.getElementById('customDimensionInputs'),
+        maxWidthInput: document.getElementById('maxWidthInput'),
+        maxHeightInput: document.getElementById('maxHeightInput'),
+        formatRadios: document.querySelectorAll('input[name="formatOption"]'),
+        jpgBgOptionWrap: document.getElementById('jpgBgOptionWrap'),
+        jpgBgColor: document.getElementById('jpgBgColor'),
+        btnResetOptions: document.getElementById('btnResetOptions'),
+        btnRecompressAll: document.getElementById('btnRecompressAll'),
+        btnClearAll: document.getElementById('btnClearAll'),
+        btnDownloadZip: document.getElementById('btnDownloadZip'),
+        zipCountDisplay: document.getElementById('zipCountDisplay'),
+        recompressSpinner: document.getElementById('recompressSpinner'),
+        recompressIcon: document.getElementById('recompressIcon'),
+        zipSpinner: document.getElementById('zipSpinner'),
+        zipIcon: document.getElementById('zipIcon'),
+        dropZone: document.getElementById('dropZone'),
+        fileInput: document.getElementById('fileInput'),
+        batchProgressWrap: document.getElementById('batchProgressWrap'),
+        batchProgressBar: document.getElementById('batchProgressBar'),
+        batchProgressLabel: document.getElementById('batchProgressLabel'),
+        batchProgressPercent: document.getElementById('batchProgressPercent'),
+        resultsSection: document.getElementById('resultsSection'),
+        emptyState: document.getElementById('emptyState'),
+        cardsGrid: document.getElementById('cardsGrid'),
+        tableListWrap: document.getElementById('tableListWrap'),
+        tableBody: document.getElementById('tableBody'),
+        listBadgeCount: document.getElementById('listBadgeCount'),
+        sortSelect: document.getElementById('sortSelect'),
+        btnViewGrid: document.getElementById('btnViewGrid'),
+        btnViewList: document.getElementById('btnViewList'),
+        statCount: document.getElementById('statCount'),
+        statOriginalSize: document.getElementById('statOriginalSize'),
+        statCompressedSize: document.getElementById('statCompressedSize'),
+        statSavingRate: document.getElementById('statSavingRate'),
+        statSavedBytes: document.getElementById('statSavedBytes'),
+        toast: document.getElementById('toast'),
+        toastMessage: document.getElementById('toastMessage'),
+        compareModal: document.getElementById('compareModal'),
+        btnCloseModal: document.getElementById('btnCloseModal'),
+        compareContainer: document.getElementById('compareContainer'),
+        modalCompressedImg: document.getElementById('modalCompressedImg'),
+        modalOriginalClip: document.getElementById('modalOriginalClip'),
+        modalOriginalImg: document.getElementById('modalOriginalImg'),
+        modalDivider: document.getElementById('modalDivider'),
+        modalFilename: document.getElementById('modalFilename'),
+        modalSubInfo: document.getElementById('modalSubInfo'),
+        modalDetails: document.getElementById('modalDetails'),
+        modalBtnDownload: document.getElementById('modalBtnDownload')
+      };
+
+      // Utilities
+      function formatBytes(bytes, decimals = 1) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+      }
+
+      function showToast(msg, duration = 2500) {
+        elements.toastMessage.textContent = msg;
+        elements.toast.classList.remove('translate-y-20', 'opacity-0');
+        elements.toast.classList.add('translate-y-0', 'opacity-100');
+        setTimeout(() => {
+          elements.toast.classList.remove('translate-y-0', 'opacity-100');
+          elements.toast.classList.add('translate-y-20', 'opacity-0');
+        }, duration);
+      }
+
+      function getOutputFormat(originalType) {
+        if (state.options.format === 'original') {
+          if (originalType === 'image/jpeg' || originalType === 'image/jpg') return 'image/jpeg';
+          if (originalType === 'image/png') return 'image/png';
+          if (originalType === 'image/webp') return 'image/webp';
+          return 'image/jpeg';
+        }
+        return state.options.format;
+      }
+
+      function getExtensionForMime(mime) {
+        switch (mime) {
+          case 'image/jpeg': return '.jpg';
+          case 'image/png': return '.png';
+          case 'image/webp': return '.webp';
+          default: return '.jpg';
+        }
+      }
+
+      function getTargetDimensions(origWidth, origHeight) {
+        let targetW = origWidth;
+        let targetH = origHeight;
+        const preset = state.options.maxDimensionPreset;
+
+        let limitW = state.options.maxWidth;
+        let limitH = state.options.maxHeight;
+
+        if (preset !== 'none' && preset !== 'custom') {
+          const maxVal = parseInt(preset, 10);
+          if (!isNaN(maxVal)) {
+            limitW = maxVal;
+            limitH = maxVal;
+          }
+        }
+
+        if (limitW || limitH) {
+          if (state.options.keepAspectRatio) {
+            const ratio = origWidth / origHeight;
+            if (limitW && limitH) {
+              const widthRatio = limitW / origWidth;
+              const heightRatio = limitH / origHeight;
+              const scale = Math.min(widthRatio, heightRatio, 1);
+              targetW = Math.round(origWidth * scale);
+              targetH = Math.round(origHeight * scale);
+            } else if (limitW && targetW > limitW) {
+              targetW = limitW;
+              targetH = Math.round(targetW / ratio);
+            } else if (limitH && targetH > limitH) {
+              targetH = limitH;
+              targetW = Math.round(targetH * ratio);
+            }
+          } else {
+            if (limitW) targetW = limitW;
+            if (limitH) targetH = limitH;
+          }
+        }
+
+        return {
+          width: Math.max(1, Math.round(targetW)),
+          height: Math.max(1, Math.round(targetH))
+        };
+      }
+
+      // --- Core Canvas Image Compression ---
+      function compressImage(item) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const origWidth = img.naturalWidth || img.width;
+            const origHeight = img.naturalHeight || img.height;
+            item.originalWidth = origWidth;
+            item.originalHeight = origHeight;
+
+            const targetDim = getTargetDimensions(origWidth, origHeight);
+            const targetMime = getOutputFormat(item.originalType);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetDim.width;
+            canvas.height = targetDim.height;
+            const ctx = canvas.getContext('2d', { alpha: true });
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // Background fill for transparent images converted to JPG
+            if (targetMime === 'image/jpeg') {
+              ctx.fillStyle = state.options.jpgBgColor || '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.drawImage(img, 0, 0, targetDim.width, targetDim.height);
+
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  item.status = 'error';
+                  resolve(item);
+                  return;
+                }
+
+                if (item.compressedUrl) {
+                  URL.revokeObjectURL(item.compressedUrl);
+                }
+
+                item.compressedBlob = blob;
+                item.compressedSize = blob.size;
+                item.compressedWidth = targetDim.width;
+                item.compressedHeight = targetDim.height;
+                item.compressedType = targetMime;
+                item.compressedUrl = URL.createObjectURL(blob);
+                item.savingsPercent = ((item.originalSize - item.compressedSize) / item.originalSize) * 100;
+                item.status = 'done';
+
+                const baseName = item.originalName.replace(/\.[^/.]+$/, '');
+                const ext = getExtensionForMime(targetMime);
+                item.compressedName = `${baseName}_compressed${ext}`;
+
+                resolve(item);
+              },
+              targetMime,
+              state.options.quality
+            );
+          };
+
+          img.onerror = () => {
+            item.status = 'error';
+            resolve(item);
+          };
+
+          img.src = item.originalUrl;
+        });
+      }
+
+      // --- Batch Processing Queue ---
+      async function processAllImages(itemsToProcess = state.images) {
+        if (!itemsToProcess || itemsToProcess.length === 0) {
+          updateStatsAndUI();
+          return;
+        }
+
+        state.isProcessing = true;
+        elements.recompressSpinner.classList.remove('hidden');
+        elements.recompressIcon.classList.add('hidden');
+        elements.btnRecompressAll.disabled = true;
+
+        elements.batchProgressWrap.classList.remove('hidden');
+        elements.batchProgressBar.style.width = '0%';
+        elements.batchProgressPercent.textContent = '0%';
+
+        const total = itemsToProcess.length;
+        for (let i = 0; i < total; i++) {
+          const item = itemsToProcess[i];
+          item.status = 'processing';
+          elements.batchProgressLabel.textContent = `이미지 압축 처리 중 (${i + 1}/${total}): ${item.originalName}`;
+
+          await compressImage(item);
+
+          const percent = Math.round(((i + 1) / total) * 100);
+          elements.batchProgressBar.style.width = percent + '%';
+          elements.batchProgressPercent.textContent = percent + '%';
+        }
+
+        setTimeout(() => {
+          elements.batchProgressWrap.classList.add('hidden');
+        }, 500);
+
+        state.isProcessing = false;
+        elements.recompressSpinner.classList.add('hidden');
+        elements.recompressIcon.classList.remove('hidden');
+        elements.btnRecompressAll.disabled = false;
+
+        updateStatsAndUI();
+        showToast(`${total}개의 이미지 압축이 완료되었습니다!`);
+      }
+
+      // --- UI Sorting & Rendering ---
+      function getSortedImages() {
+        const list = [...state.images];
+        switch (state.sortBy) {
+          case 'savings-desc':
+            return list.sort((a, b) => (b.savingsPercent || 0) - (a.savingsPercent || 0));
+          case 'size-desc':
+            return list.sort((a, b) => (b.compressedSize || 0) - (a.compressedSize || 0));
+          case 'name':
+            return list.sort((a, b) => a.originalName.localeCompare(b.originalName));
+          case 'upload':
+          default:
+            return list;
+        }
+      }
+
+      function updateStatsAndUI() {
+        const total = state.images.length;
+        elements.statCount.textContent = total;
+        elements.zipCountDisplay.textContent = total;
+        elements.listBadgeCount.textContent = total;
+
+        let totalOriginal = 0;
+        let totalCompressed = 0;
+
+        state.images.forEach((img) => {
+          totalOriginal += img.originalSize || 0;
+          totalCompressed += img.compressedSize || 0;
+        });
+
+        elements.statOriginalSize.textContent = formatBytes(totalOriginal);
+        elements.statCompressedSize.textContent = formatBytes(totalCompressed);
+
+        if (totalOriginal > 0) {
+          const totalSaved = totalOriginal - totalCompressed;
+          const rate = ((totalSaved / totalOriginal) * 100).toFixed(1);
+          elements.statSavingRate.textContent = `${rate}%`;
+          elements.statSavedBytes.textContent = `${formatBytes(totalSaved)} 절약`;
+          if (totalSaved >= 0) {
+            elements.statSavingRate.className = 'text-2xl font-bold text-emerald-600 dark:text-emerald-400';
+            elements.statSavedBytes.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-medium';
+          } else {
+            elements.statSavingRate.className = 'text-2xl font-bold text-amber-500';
+            elements.statSavedBytes.className = 'text-xs text-amber-500 font-medium';
+          }
+        } else {
+          elements.statSavingRate.textContent = '0%';
+          elements.statSavedBytes.textContent = '0 B 절약';
+        }
+
+        const hasImages = total > 0;
+        elements.btnDownloadZip.disabled = !hasImages;
+        elements.btnRecompressAll.disabled = !hasImages;
+        elements.btnClearAll.disabled = !hasImages;
+        elements.emptyState.classList.toggle('hidden', hasImages);
+
+        renderList();
+      }
+
+      function renderList() {
+        const sorted = getSortedImages();
+
+        if (state.viewMode === 'grid') {
+          elements.cardsGrid.classList.remove('hidden');
+          elements.tableListWrap.classList.add('hidden');
+          elements.cardsGrid.innerHTML = '';
+
+          sorted.forEach((item) => {
+            const card = createCardElement(item);
+            elements.cardsGrid.appendChild(card);
+          });
+        } else {
+          elements.cardsGrid.classList.add('hidden');
+          elements.tableListWrap.classList.remove('hidden');
+          elements.tableBody.innerHTML = '';
+
+          sorted.forEach((item) => {
+            const row = createTableRowElement(item);
+            elements.tableBody.appendChild(row);
+          });
+        }
+      }
+
+      function createCardElement(item) {
+        const div = document.createElement('div');
+        div.className = 'card p-4 flex flex-col sm:flex-row sm:items-center gap-4 transition hover:shadow-md';
+
+        const isPositiveSavings = (item.savingsPercent || 0) >= 0;
+        const absRate = Math.abs(item.savingsPercent || 0).toFixed(1);
+        const savingsBadgeText = isPositiveSavings ? `-${absRate}% Saved` : `+${absRate}%`;
+        const badgeClass = isPositiveSavings ? 'badge badge-success' : 'badge badge-warning';
+        const progressPct = item.originalSize > 0 ? Math.min(100, Math.max(5, Math.round((item.compressedSize / item.originalSize) * 100))) : 100;
+
+        div.innerHTML = `
+          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded bg-slate-100 dark:bg-slate-800 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700 checkerboard-bg cursor-pointer group relative" data-action="compare" data-id="${item.id}" title="화질 비교">
+            <img src="${item.compressedUrl || item.originalUrl}" alt="${item.originalName}" class="w-full h-full object-contain transition duration-200 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-start mb-1 gap-2">
+              <div class="flex items-center gap-2 truncate">
+                <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate" title="${item.originalName}">${item.originalName}</h3>
+                <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">${(item.compressedType || '').replace('image/', '')}</span>
+              </div>
+              <span class="${badgeClass} flex-shrink-0">${savingsBadgeText}</span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-500 dark:text-slate-400 mb-2.5">
+              <span class="font-mono">${item.originalWidth} × ${item.originalHeight} px ➔ <strong class="text-blue-600 dark:text-blue-400">${item.compressedWidth} × ${item.compressedHeight} px</strong></span>
+              <span class="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+              <span>Original: <span class="font-medium text-slate-700 dark:text-slate-300">${formatBytes(item.originalSize)}</span></span>
+              <span class="text-slate-300 dark:text-slate-600 hidden sm:inline">|</span>
+              <span class="font-bold text-blue-600 dark:text-blue-400">Compressed: ${formatBytes(item.compressedSize)}</span>
+            </div>
+
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${progressPct}%" title="${progressPct}% of original size"></div>
+            </div>
+          </div>
+
+          <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 dark:border-slate-800">
+            <div class="flex sm:flex-col gap-1.5 w-full sm:w-auto">
+              <button data-action="compare" data-id="${item.id}" class="btn-secondary py-1 px-3 text-xs flex-1 sm:flex-none">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Preview
+              </button>
+              <button data-action="download" data-id="${item.id}" class="btn-primary py-1 px-3 text-xs flex-1 sm:flex-none">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Save
+              </button>
+            </div>
+            <button data-action="delete" data-id="${item.id}" title="제거" class="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `;
+
+        bindItemActions(div, item);
+        return div;
+      }
+
+      function createTableRowElement(item) {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition';
+
+        const isPositiveSavings = (item.savingsPercent || 0) >= 0;
+        const absRate = Math.abs(item.savingsPercent || 0).toFixed(1);
+        const savingsBadgeText = isPositiveSavings ? `-${absRate}% Saved` : `+${absRate}%`;
+        const badgeClass = isPositiveSavings ? 'badge badge-success' : 'badge badge-warning';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-4">
+            <div class="w-12 h-12 rounded checkerboard-bg overflow-hidden cursor-pointer border border-slate-200 dark:border-slate-700" data-action="compare" data-id="${item.id}">
+              <img src="${item.compressedUrl || item.originalUrl}" alt="${item.originalName}" class="w-full h-full object-contain" />
+            </div>
+          </td>
+          <td class="py-2.5 px-4">
+            <div class="font-semibold text-slate-900 dark:text-slate-100 truncate max-w-xs" title="${item.originalName}">${item.originalName}</div>
+            <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">${(item.compressedType || '').replace('image/', '')}</span>
+          </td>
+          <td class="py-2.5 px-4 font-mono text-slate-600 dark:text-slate-400">
+            ${item.originalWidth}×${item.originalHeight} ➔ <strong class="text-blue-600 dark:text-blue-400">${item.compressedWidth}×${item.compressedHeight}</strong>
+          </td>
+          <td class="py-2.5 px-4 font-mono">
+            <span class="line-through text-slate-400">${formatBytes(item.originalSize)}</span> ➔ <strong class="text-slate-900 dark:text-white font-bold">${formatBytes(item.compressedSize)}</strong>
+          </td>
+          <td class="py-2.5 px-4">
+            <span class="${badgeClass}">
+              ${savingsBadgeText}
+            </span>
+          </td>
+          <td class="py-2.5 px-4 text-right">
+            <div class="inline-flex items-center gap-1.5">
+              <button data-action="compare" data-id="${item.id}" class="btn-secondary py-1 px-2.5 text-xs" title="화질 비교">
+                비교
+              </button>
+              <button data-action="download" data-id="${item.id}" class="btn-primary py-1 px-2.5 text-xs">
+                다운로드
+              </button>
+              <button data-action="delete" data-id="${item.id}" class="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" title="제거">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </td>
+        `;
+
+        bindItemActions(tr, item);
+        return tr;
+      }
+
+      function bindItemActions(container, item) {
+        container.querySelectorAll('[data-action]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.getAttribute('data-action');
+            if (action === 'download') {
+              downloadSingleImage(item);
+            } else if (action === 'compare') {
+              openCompareModal(item);
+            } else if (action === 'delete') {
+              deleteItem(item.id);
+            }
+          });
+        });
+      }
+
+      // --- Download Logic ---
+      function downloadSingleImage(item) {
+        if (!item.compressedBlob) return;
+        const url = URL.createObjectURL(item.compressedBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.compressedName || 'compressed_image.jpg';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      async function downloadAllAsZip() {
+        if (!state.images.length) return;
+
+        if (typeof JSZip === 'undefined') {
+          showToast('JSZip 라이브러리를 로드할 수 없습니다.');
+          return;
+        }
+
+        elements.btnDownloadZip.disabled = true;
+        elements.zipSpinner.classList.remove('hidden');
+        elements.zipIcon.classList.add('hidden');
+
+        try {
+          const zip = new JSZip();
+          const folder = zip.folder('compressed_images');
+
+          const nameCount = {};
+          state.images.forEach((item) => {
+            if (item.compressedBlob) {
+              let name = item.compressedName || 'image.jpg';
+              if (nameCount[name]) {
+                const extIndex = name.lastIndexOf('.');
+                const base = extIndex !== -1 ? name.substring(0, extIndex) : name;
+                const ext = extIndex !== -1 ? name.substring(extIndex) : '';
+                nameCount[name]++;
+                name = `${base}_${nameCount[name]}${ext}`;
+              } else {
+                nameCount[name] = 1;
+              }
+              folder.file(name, item.compressedBlob);
+            }
+          });
+
+          const zipBlob = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+          });
+
+          const url = URL.createObjectURL(zipBlob);
+          const a = document.createElement('a');
+          const timestamp = new Date().toISOString().slice(0, 10);
+          a.href = url;
+          a.download = `compressed_images_${timestamp}.zip`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+          showToast('ZIP 파일 다운로드가 완료되었습니다!');
+        } catch (err) {
+          console.error('ZIP creation error:', err);
+          showToast('ZIP 압축 중 오류가 발생했습니다.');
+        } finally {
+          elements.btnDownloadZip.disabled = false;
+          elements.zipSpinner.classList.add('hidden');
+          elements.zipIcon.classList.remove('hidden');
+        }
+      }
+
+      function deleteItem(id) {
+        const index = state.images.findIndex((img) => img.id === id);
+        if (index !== -1) {
+          const item = state.images[index];
+          if (item.originalUrl) URL.revokeObjectURL(item.originalUrl);
+          if (item.compressedUrl) URL.revokeObjectURL(item.compressedUrl);
+          state.images.splice(index, 1);
+          updateStatsAndUI();
+          showToast('이미지가 삭제되었습니다.');
+        }
+      }
+
+      function clearAllImages() {
+        if (!state.images.length) return;
+        state.images.forEach((item) => {
+          if (item.originalUrl) URL.revokeObjectURL(item.originalUrl);
+          if (item.compressedUrl) URL.revokeObjectURL(item.compressedUrl);
+        });
+        state.images = [];
+        updateStatsAndUI();
+        showToast('모든 이미지가 제거되었습니다.');
+      }
+
+      // --- File Upload Processing ---
+      async function handleFiles(files) {
+        if (!files || files.length === 0) return;
+
+        const newItems = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (!file.type.startsWith('image/')) continue;
+
+          const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          const originalUrl = URL.createObjectURL(file);
+
+          const item = {
+            id,
+            file,
+            originalName: file.name,
+            originalSize: file.size,
+            originalType: file.type || 'image/jpeg',
+            originalUrl,
+            status: 'pending',
+            originalWidth: 0,
+            originalHeight: 0,
+            compressedWidth: 0,
+            compressedHeight: 0,
+            compressedSize: 0,
+            compressedUrl: null,
+            compressedBlob: null,
+            compressedName: '',
+            compressedType: '',
+            savingsPercent: 0
+          };
+
+          newItems.push(item);
+        }
+
+        if (newItems.length === 0) {
+          showToast('선택된 이미지 파일이 없습니다.');
+          return;
+        }
+
+        state.images.push(...newItems);
+        updateStatsAndUI();
+        await processAllImages(newItems);
+      }
+
+      // --- Before / After Slider Comparison Modal ---
+      function openCompareModal(item) {
+        activeModalImage = item;
+        elements.modalFilename.textContent = item.originalName;
+        elements.modalSubInfo.textContent = `원본 (${formatBytes(item.originalSize)}, ${item.originalWidth}×${item.originalHeight}px) vs 압축본 (${formatBytes(item.compressedSize)}, ${item.compressedWidth}×${item.compressedHeight}px)`;
+
+        const isPositive = (item.savingsPercent || 0) >= 0;
+        const absRate = Math.abs(item.savingsPercent || 0).toFixed(1);
+        const rateText = isPositive ? `-${absRate}%` : `+${absRate}%`;
+        const savedText = formatBytes(Math.abs(item.originalSize - item.compressedSize));
+
+        elements.modalDetails.innerHTML = `
+          용량 변화: <span class="font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}">${rateText}</span> 
+          (${isPositive ? `${savedText} 절약` : `${savedText} 증가`})
+        `;
+
+        elements.modalCompressedImg.src = item.compressedUrl || item.originalUrl;
+        elements.modalOriginalImg.src = item.originalUrl;
+
+        // Ensure both images align pixel-perfectly once loaded
+        elements.modalCompressedImg.onload = () => {
+          syncModalImageSizes();
+        };
+
+        setComparePosition(50);
+        elements.compareModal.classList.remove('hidden');
+        setTimeout(syncModalImageSizes, 50);
+      }
+
+      function syncModalImageSizes() {
+        const compImg = elements.modalCompressedImg;
+        if (!compImg) return;
+        const w = compImg.clientWidth;
+        const h = compImg.clientHeight;
+        if (w > 0 && h > 0) {
+          elements.modalOriginalImg.style.width = w + 'px';
+          elements.modalOriginalImg.style.height = h + 'px';
+          elements.compareContainer.style.width = w + 'px';
+          elements.compareContainer.style.height = h + 'px';
+        }
+      }
+
+      function closeCompareModal() {
+        elements.compareModal.classList.add('hidden');
+        activeModalImage = null;
+      }
+
+      function setComparePosition(percentage) {
+        const clamped = Math.max(0, Math.min(100, percentage));
+        elements.modalOriginalClip.style.width = clamped + '%';
+        elements.modalDivider.style.left = clamped + '%';
+      }
+
+      let isDraggingDivider = false;
+      function handleDividerDrag(clientX) {
+        const rect = elements.compareContainer.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const pos = ((clientX - rect.left) / rect.width) * 100;
+        setComparePosition(pos);
+      }
+
+      elements.compareContainer.addEventListener('mousedown', (e) => {
+        isDraggingDivider = true;
+        handleDividerDrag(e.clientX);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDraggingDivider) return;
+        handleDividerDrag(e.clientX);
+      });
+      window.addEventListener('mouseup', () => {
+        isDraggingDivider = false;
+      });
+
+      // Mobile Touch support
+      elements.compareContainer.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+          isDraggingDivider = true;
+          handleDividerDrag(e.touches[0].clientX);
+        }
+      }, { passive: true });
+      window.addEventListener('touchmove', (e) => {
+        if (!isDraggingDivider || !e.touches || !e.touches[0]) return;
+        handleDividerDrag(e.touches[0].clientX);
+      }, { passive: true });
+      window.addEventListener('touchend', () => {
+        isDraggingDivider = false;
+      });
+
+      // --- Event Listeners Setup ---
+
+      // Theme toggle
+      elements.btnThemeToggle.addEventListener('click', () => {
+        const next = state.theme === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+      });
+
+      // Single file HTML copy button with immediate button feedback
+      elements.btnCopyHtml.addEventListener('click', async () => {
+        try {
+          const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+          await navigator.clipboard.writeText(htmlContent);
+          
+          // Visual button feedback
+          const originalText = elements.copyBtnText.innerHTML;
+          elements.copyBtnText.innerHTML = '<span class="text-emerald-600 dark:text-emerald-400 font-semibold">복사 완료!</span>';
+          elements.copyIcon.className = 'w-4 h-4 text-emerald-500';
+          showToast('index.html 전체 소스코드가 복사되었습니다. 이제 어디서든 바로 사용 가능합니다!');
+          
+          setTimeout(() => {
+            elements.copyBtnText.innerHTML = originalText;
+            elements.copyIcon.className = 'w-4 h-4 text-blue-500';
+          }, 2500);
+        } catch (err) {
+          showToast('복사 권한이 차단되었습니다. 브라우저 설정을 확인해주세요.');
+        }
+      });
+
+      // Dropzone events
+      const dropZone = elements.dropZone;
+      ['dragenter', 'dragover'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('border-blue-500', 'bg-blue-50/40', 'dark:bg-blue-950/20');
+        });
+      });
+      ['dragleave', 'drop'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('border-blue-500', 'bg-blue-50/40', 'dark:bg-blue-950/20');
+        });
+      });
+      dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length) {
+          handleFiles(dt.files);
+        }
+      });
+      elements.fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length) {
+          handleFiles(e.target.files);
+          e.target.value = '';
+        }
+      });
+
+      // Clipboard paste support (Ctrl+V)
+      window.addEventListener('paste', (e) => {
+        if (e.clipboardData && e.clipboardData.items) {
+          const files = [];
+          for (let i = 0; i < e.clipboardData.items.length; i++) {
+            const item = e.clipboardData.items[i];
+            if (item.type.indexOf('image') !== -1) {
+              const file = item.getAsFile();
+              if (file) files.push(file);
+            }
+          }
+          if (files.length > 0) {
+            handleFiles(files);
+            showToast('클립보드 이미지를 업로드했습니다.');
+          }
+        }
+      });
+
+      // Quality slider
+      elements.qualitySlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.options.quality = val / 100;
+        elements.qualityDisplay.textContent = val + '%';
+        highlightQualityPreset(val);
+      });
+
+      elements.qualitySlider.addEventListener('change', () => {
+        if (state.images.length > 0) {
+          processAllImages();
+        }
+      });
+
+      function highlightQualityPreset(val) {
+        elements.qualityPresets.forEach((btn) => {
+          const q = parseInt(btn.getAttribute('data-quality'), 10);
+          if (q === val) {
+            btn.className = 'btn-quality-preset px-2.5 py-1 text-xs font-semibold rounded-md bg-blue-600 text-white transition';
+          } else {
+            btn.className = 'btn-quality-preset px-2.5 py-1 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition';
+          }
+        });
+      }
+
+      elements.qualityPresets.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const q = parseInt(btn.getAttribute('data-quality'), 10);
+          elements.qualitySlider.value = q;
+          state.options.quality = q / 100;
+          elements.qualityDisplay.textContent = q + '%';
+          highlightQualityPreset(q);
+          if (state.images.length > 0) {
+            processAllImages();
+          }
+        });
+      });
+
+      // Resize Presets
+      elements.resizePreset.addEventListener('change', (e) => {
+        const val = e.target.value;
+        state.options.maxDimensionPreset = val;
+
+        const isCustom = val === 'custom';
+        elements.customDimensionInputs.classList.toggle('opacity-60', !isCustom);
+        elements.customDimensionInputs.classList.toggle('pointer-events-none', !isCustom);
+
+        if (!isCustom && val !== 'none') {
+          const num = parseInt(val, 10);
+          elements.maxWidthInput.value = num;
+          elements.maxHeightInput.value = num;
+          state.options.maxWidth = num;
+          state.options.maxHeight = num;
+        } else if (val === 'none') {
+          elements.maxWidthInput.value = '';
+          elements.maxHeightInput.value = '';
+          state.options.maxWidth = null;
+          state.options.maxHeight = null;
+        }
+
+        if (state.images.length > 0) {
+          processAllImages();
+        }
+      });
+
+      elements.keepAspectRatio.addEventListener('change', (e) => {
+        state.options.keepAspectRatio = e.target.checked;
+        if (state.images.length > 0) {
+          processAllImages();
+        }
+      });
+
+      elements.maxWidthInput.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.options.maxWidth = isNaN(val) ? null : val;
+        if (state.images.length > 0) processAllImages();
+      });
+
+      elements.maxHeightInput.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        state.options.maxHeight = isNaN(val) ? null : val;
+        if (state.images.length > 0) processAllImages();
+      });
+
+      // Output Format
+      elements.formatRadios.forEach((radio) => {
+        radio.addEventListener('change', (e) => {
+          state.options.format = e.target.value;
+          elements.jpgBgOptionWrap.style.display = (e.target.value === 'image/jpeg') ? 'flex' : 'none';
+          if (state.images.length > 0) {
+            processAllImages();
+          }
+        });
+      });
+      elements.jpgBgColor.addEventListener('change', (e) => {
+        state.options.jpgBgColor = e.target.value;
+        if (state.options.format === 'image/jpeg' && state.images.length > 0) {
+          processAllImages();
+        }
+      });
+
+      // Reset options to default
+      elements.btnResetOptions.addEventListener('click', () => {
+        elements.qualitySlider.value = 80;
+        state.options.quality = 0.8;
+        elements.qualityDisplay.textContent = '80%';
+        highlightQualityPreset(80);
+
+        elements.resizePreset.value = 'none';
+        state.options.maxDimensionPreset = 'none';
+        elements.keepAspectRatio.checked = true;
+        state.options.keepAspectRatio = true;
+        elements.maxWidthInput.value = '';
+        elements.maxHeightInput.value = '';
+        state.options.maxWidth = null;
+        state.options.maxHeight = null;
+        elements.customDimensionInputs.classList.add('opacity-60', 'pointer-events-none');
+
+        document.querySelector('input[name="formatOption"][value="original"]').checked = true;
+        state.options.format = 'original';
+        elements.jpgBgOptionWrap.style.display = 'none';
+
+        showToast('옵션이 기본값으로 초기화되었습니다.');
+        if (state.images.length > 0) {
+          processAllImages();
+        }
+      });
+
+      // Global Actions
+      elements.btnRecompressAll.addEventListener('click', () => {
+        processAllImages();
+      });
+
+      elements.btnClearAll.addEventListener('click', () => {
+        if (confirm('등록된 모든 이미지를 목록에서 지우시겠습니까?')) {
+          clearAllImages();
+        }
+      });
+
+      elements.btnDownloadZip.addEventListener('click', downloadAllAsZip);
+
+      // Sorting
+      elements.sortSelect.addEventListener('change', (e) => {
+        state.sortBy = e.target.value;
+        renderList();
+      });
+
+      // View Modes
+      elements.btnViewGrid.addEventListener('click', () => {
+        state.viewMode = 'grid';
+        elements.btnViewGrid.className = 'p-1.5 rounded-md text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400';
+        elements.btnViewList.className = 'p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white';
+        renderList();
+      });
+
+      elements.btnViewList.addEventListener('click', () => {
+        state.viewMode = 'list';
+        elements.btnViewList.className = 'p-1.5 rounded-md text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-400';
+        elements.btnViewGrid.className = 'p-1.5 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white';
+        renderList();
+      });
+
+      // Modal
+      elements.btnCloseModal.addEventListener('click', closeCompareModal);
+      elements.compareModal.addEventListener('click', (e) => {
+        if (e.target === elements.compareModal) closeCompareModal();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !elements.compareModal.classList.contains('hidden')) {
+          closeCompareModal();
+        }
+      });
+      elements.modalBtnDownload.addEventListener('click', () => {
+        if (activeModalImage) {
+          downloadSingleImage(activeModalImage);
+        }
+      });
+
+      // Initialize
+      elements.jpgBgOptionWrap.style.display = 'none';
+      updateStatsAndUI();
+    })();
+  </script>
+</body>
+</html>
